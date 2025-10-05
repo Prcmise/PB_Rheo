@@ -1,20 +1,20 @@
-# PINN流变性能预测系统 - 完整流程图
+# PINN Rheology Prediction System - Complete Flowchart
 
-## 📊 整体架构流程
+## 📊 Overall Architecture Flow
 
 ```mermaid
 flowchart TD
-    Start([开始]) --> Config[配置参数设置]
-    Config --> DataLoad[数据加载]
+    Start([Start]) --> Config[Configuration Setup]
+    Config --> DataLoad[Data Loading]
     
-    DataLoad --> DataProcess[数据预处理与特征工程]
-    DataProcess --> DataSplit[数据集划分]
-    DataSplit --> ModelDef[PINN模型定义]
+    DataLoad --> DataProcess[Data Preprocessing & Feature Engineering]
+    DataProcess --> DataSplit[Dataset Split]
+    DataSplit --> ModelDef[PINN Model Definition]
     
-    ModelDef --> Training[模型训练]
-    Training --> Evaluation[模型评估]
-    Evaluation --> Prediction[新样本预测]
-    Prediction --> End([结束])
+    ModelDef --> Training[Model Training]
+    Training --> Evaluation[Model Evaluation]
+    Evaluation --> Prediction[New Sample Prediction]
+    Prediction --> End([End])
     
     style Start fill:#90EE90
     style End fill:#FFB6C1
@@ -24,15 +24,15 @@ flowchart TD
 
 ---
 
-## 🔧 详细流程图
+## 🔧 Detailed Flowcharts
 
-### 1️⃣ 配置与初始化阶段
+### 1️⃣ Configuration & Initialization Phase
 
 ```mermaid
 flowchart LR
-    A[系统配置] --> B[设备检测<br/>CUDA/CPU]
-    B --> C[随机种子设置<br/>RANDOM_SEED=24]
-    C --> D[超参数配置]
+    A[System Configuration] --> B[Device Detection<br/>CUDA/CPU]
+    B --> C[Random Seed Setup<br/>RANDOM_SEED=24]
+    C --> D[Hyperparameter Config]
     
     D --> D1[BATCH_SIZE=64]
     D --> D2[LEARNING_RATE=8e-4]
@@ -44,44 +44,44 @@ flowchart LR
     style D fill:#F0E68C
 ```
 
-**关键参数说明：**
-- 训练集：80% (~1499条)
-- 验证集：20% (~375条)
-- 最大训练轮数：1000轮
-- 提前停止耐心值：50轮
+**Key Parameters:**
+- Training set: 80% (~1499 samples)
+- Validation set: 20% (~375 samples)
+- Max training epochs: 1000
+- Early stopping patience: 50 epochs
 
 ---
 
-### 2️⃣ 数据处理流程
+### 2️⃣ Data Processing Flow
 
 ```mermaid
 flowchart TD
-    A[读取PB_Data.csv<br/>1874条数据] --> B[基础特征工程]
+    A[Load PB_Data.csv<br/>1874 samples] --> B[Basic Feature Engineering]
     
-    B --> B1[几何特征<br/>aspect_ratio = Length/Width]
-    B --> B2[频率特征<br/>log_freq = log10_Freq]
-    B --> B3[温度特征<br/>temp_inv = 1/T_K<br/>T_x_aspect]
+    B --> B1[Geometric Features<br/>aspect_ratio = Length/Width]
+    B --> B2[Frequency Features<br/>log_freq = log10_Freq]
+    B --> B3[Temperature Features<br/>temp_inv = 1/T_K<br/>T_x_aspect]
     
-    B --> C[分子量特征]
+    B --> C[Molecular Weight Features]
     C --> C1[PDI = Mw/Mn]
     C --> C2[log_Mw, log_Mn]
     
-    B --> D[WLF时温等效]
-    D --> D1[计算位移因子aT]
+    B --> D[WLF Time-Temperature Superposition]
+    D --> D1[Calculate Shift Factor aT]
     D --> D2[reduced_freq = Freq × aT]
     
-    B --> E[目标变量处理]
+    B --> E[Target Variable Processing]
     E --> E1[tan_delta = G2/G1]
-    E --> E2[数据权重设置<br/>outlier: weight=0]
-    E --> E3[对数转换<br/>log_G1, log_G2]
+    E --> E2[Data Weight Setup<br/>outlier: weight=0]
+    E --> E3[Log Transformation<br/>log_G1, log_G2]
     
-    E3 --> F[数据标准化<br/>StandardScaler]
-    F --> G[数据集划分]
+    E3 --> F[Data Standardization<br/>StandardScaler]
+    F --> G[Dataset Split]
     
-    G --> G1[训练集 80%<br/>~1499条]
-    G --> G2[验证集 20%<br/>~375条]
+    G --> G1[Training Set 80%<br/>~1499 samples]
+    G --> G2[Validation Set 20%<br/>~375 samples]
     
-    G1 --> H[创建DataLoader]
+    G1 --> H[Create DataLoader]
     G2 --> H
     
     style A fill:#FFB6C1
@@ -89,7 +89,7 @@ flowchart TD
     style G fill:#87CEEB
 ```
 
-**特征列表（12个特征）：**
+**Feature List (12 features):**
 1. Length_nm
 2. Width_nm
 3. aspect_ratio
@@ -105,34 +105,34 @@ flowchart TD
 
 ---
 
-### 3️⃣ PINN模型架构
+### 3️⃣ PINN Model Architecture
 
 ```mermaid
 flowchart TD
-    Input[输入特征 12维] --> Encoder[共享编码器]
+    Input[Input Features 12D] --> Encoder[Shared Encoder]
     
     Encoder --> E1[Linear_256 + BatchNorm + GELU + Dropout]
     E1 --> E2[Linear_256 + BatchNorm + GELU + Dropout]
     E2 --> E3[Linear_256 + BatchNorm + GELU + Dropout]
     E3 --> E4[Linear_256 + BatchNorm + GELU + Dropout]
     
-    E4 --> Split{分支处理}
+    E4 --> Split{Branch Split}
     
-    Split --> Branch1[G'预测分支]
+    Split --> Branch1[G' Prediction Branch]
     Branch1 --> B1_1[Linear_128 + BN + GELU + Dropout]
     B1_1 --> B1_2[Linear_64 + BN + GELU]
     B1_2 --> B1_3[Linear_1]
-    B1_3 --> Out1[log_G' 输出]
+    B1_3 --> Out1[log_G' Output]
     
-    Split --> Branch2[G''预测分支]
+    Split --> Branch2[G'' Prediction Branch]
     Branch2 --> B2_1[Linear_128 + BN + GELU + Dropout]
     B2_1 --> B2_2[Linear_64 + BN + GELU]
     B2_2 --> B2_3[Linear_1]
-    B2_3 --> Out2[log_G'' 输出]
+    B2_3 --> Out2[log_G'' Output]
     
-    Out1 --> Concat[拼接输出]
+    Out1 --> Concat[Concatenate Output]
     Out2 --> Concat
-    Concat --> Final[预测结果 2维]
+    Concat --> Final[Prediction Result 2D]
     
     style Input fill:#FFE4B5
     style Encoder fill:#DDA0DD
@@ -140,42 +140,42 @@ flowchart TD
     style Final fill:#90EE90
 ```
 
-**模型特点：**
-- 深层共享编码器（4层×256神经元）
-- 双分支结构（G' 和 G'' 独立预测）
-- BatchNorm + GELU 激活函数
-- Dropout (rate=0.05) 用于不确定性量化
+**Model Features:**
+- Deep shared encoder (4 layers × 256 neurons)
+- Dual-branch architecture (G' and G'' independent prediction)
+- BatchNorm + GELU activation function
+- Dropout (rate=0.05) for uncertainty quantification
 
 ---
 
-### 4️⃣ 训练流程（核心）
+### 4️⃣ Training Flow (Core)
 
 ```mermaid
 flowchart TD
-    Start([开始训练<br/>Epoch 1-1000]) --> Init[初始化优化器与调度器]
+    Start([Start Training<br/>Epoch 1-1000]) --> Init[Initialize Optimizer & Scheduler]
     
-    Init --> Init1[AdamW优化器<br/>lr=8e-4, weight_decay=1e-4]
-    Init --> Init2[OneCycleLR调度器]
+    Init --> Init1[AdamW Optimizer<br/>lr=8e-4, weight_decay=1e-4]
+    Init --> Init2[OneCycleLR Scheduler]
     
-    Init1 --> Loop{遍历训练批次}
+    Init1 --> Loop{Iterate Training Batches}
     Init2 --> Loop
     
-    Loop --> Forward[前向传播<br/>y_pred = model_X]
+    Loop --> Forward[Forward Pass<br/>y_pred = model_X]
     
-    Forward --> DataLoss[计算数据损失]
-    DataLoss --> DL1[G'损失: MSE × 0.6]
-    DataLoss --> DL2[G''损失: MSE × 0.4]
-    DataLoss --> DL3[应用样本权重]
+    Forward --> DataLoss[Calculate Data Loss]
+    DataLoss --> DL1[G' Loss: MSE × 0.6]
+    DataLoss --> DL2[G'' Loss: MSE × 0.4]
+    DataLoss --> DL3[Apply Sample Weights]
     
-    Forward --> PhysicsLoss[计算物理约束损失]
+    Forward --> PhysicsLoss[Calculate Physics Constraint Loss]
     
-    PhysicsLoss --> PL1[Cox-Merz规则<br/>复数粘度单调性<br/>权重×0.20]
-    PhysicsLoss --> PL2[tan_δ_范围约束<br/>0 < tan_δ_ < 10<br/>权重×0.50]
-    PhysicsLoss --> PL3[斜率范围约束<br/>-0.1 < slope < 0.4<br/>权重×0.40]
-    PhysicsLoss --> PL4[平滑性约束<br/>二阶导数<br/>权重×0.20]
-    PhysicsLoss --> PL5[热力学约束<br/>G', G'' > 0<br/>权重×0.05]
+    PhysicsLoss --> PL1[Cox-Merz Rule<br/>Complex Viscosity Monotonicity<br/>Weight×0.20]
+    PhysicsLoss --> PL2[tan_δ_ Range Constraint<br/>0 < tan_δ_ < 10<br/>Weight×0.50]
+    PhysicsLoss --> PL3[Slope Range Constraint<br/>-0.1 < slope < 0.4<br/>Weight×0.40]
+    PhysicsLoss --> PL4[Smoothness Constraint<br/>Second Derivative<br/>Weight×0.20]
+    PhysicsLoss --> PL5[Thermodynamic Constraint<br/>G', G'' > 0<br/>Weight×0.05]
     
-    DL3 --> Combine[组合总损失]
+    DL3 --> Combine[Combine Total Loss]
     PL1 --> Combine
     PL2 --> Combine
     PL3 --> Combine
@@ -184,37 +184,37 @@ flowchart TD
     
     Combine --> TotalLoss[Total Loss = Data Loss<br/>+ physics_weight × Physics Loss]
     
-    TotalLoss --> Backward[反向传播]
-    Backward --> GradClip[梯度裁剪<br/>max_norm=1.0]
-    GradClip --> Update[参数更新]
+    TotalLoss --> Backward[Backward Pass]
+    Backward --> GradClip[Gradient Clipping<br/>max_norm=1.0]
+    GradClip --> Update[Parameter Update]
     
-    Update --> MoreBatch{还有批次?}
-    MoreBatch -->|是| Loop
-    MoreBatch -->|否| Validation[验证阶段]
+    Update --> MoreBatch{More Batches?}
+    MoreBatch -->|Yes| Loop
+    MoreBatch -->|No| Validation[Validation Phase]
     
-    Validation --> ValLoop{遍历验证批次}
-    ValLoop --> ValForward[前向传播]
-    ValForward --> ValLoss[计算验证损失]
-    ValLoss --> MoreValBatch{还有批次?}
-    MoreValBatch -->|是| ValLoop
-    MoreValBatch -->|否| Compare[比较验证损失]
+    Validation --> ValLoop{Iterate Validation Batches}
+    ValLoop --> ValForward[Forward Pass]
+    ValForward --> ValLoss[Calculate Validation Loss]
+    ValLoss --> MoreValBatch{More Batches?}
+    MoreValBatch -->|Yes| ValLoop
+    MoreValBatch -->|No| Compare[Compare Validation Loss]
     
-    Compare --> BestModel{验证损失<br/>是否改善?}
-    BestModel -->|是| SaveModel[保存最佳模型<br/>重置patience=0]
-    BestModel -->|否| IncPatience[patience + 1]
+    Compare --> BestModel{Val Loss<br/>Improved?}
+    BestModel -->|Yes| SaveModel[Save Best Model<br/>Reset patience=0]
+    BestModel -->|No| IncPatience[patience + 1]
     
     SaveModel --> CheckEpoch
     IncPatience --> CheckStop{patience >= 50?}
-    CheckStop -->|是| EarlyStop[提前停止]
-    CheckStop -->|否| CheckEpoch
+    CheckStop -->|Yes| EarlyStop[Early Stopping]
+    CheckStop -->|No| CheckEpoch
     
     CheckEpoch{Epoch < 1000?}
-    CheckEpoch -->|是| Loop
-    CheckEpoch -->|否| LoadBest[加载最佳模型]
+    CheckEpoch -->|Yes| Loop
+    CheckEpoch -->|No| LoadBest[Load Best Model]
     EarlyStop --> LoadBest
     
-    LoadBest --> PlotHistory[绘制训练历史]
-    PlotHistory --> End([训练完成])
+    LoadBest --> PlotHistory[Plot Training History]
+    PlotHistory --> End([Training Complete])
     
     style Start fill:#90EE90
     style TotalLoss fill:#FFB6C1
@@ -222,32 +222,32 @@ flowchart TD
     style End fill:#87CEEB
 ```
 
-**损失函数组成：**
-1. **数据损失**：0.6×MSE(G') + 0.4×MSE(G'')
-2. **物理约束损失**（5个组件）：
-   - Cox-Merz规则 (20%)
-   - tan(δ)范围 (50%)
-   - 斜率范围 (40%)
-   - 平滑性 (20%)
-   - 热力学 (5%)
+**Loss Function Components:**
+1. **Data Loss**: 0.6×MSE(G') + 0.4×MSE(G'')
+2. **Physics Constraint Loss** (5 components):
+   - Cox-Merz Rule (20%)
+   - tan(δ) Range (50%)
+   - Slope Range (40%)
+   - Smoothness (20%)
+   - Thermodynamics (5%)
 
 ---
 
-### 5️⃣ 模型评估流程
+### 5️⃣ Model Evaluation Flow
 
 ```mermaid
 flowchart TD
-    A[加载最佳模型] --> B[训练集评估]
-    A --> C[验证集评估]
+    A[Load Best Model] --> B[Training Set Evaluation]
+    A --> C[Validation Set Evaluation]
     
-    B --> B1[前向传播]
-    C --> C1[前向传播]
+    B --> B1[Forward Pass]
+    C --> C1[Forward Pass]
     
-    B1 --> B2[反标准化]
-    C1 --> C2[反标准化]
+    B1 --> B2[Inverse Transform]
+    C1 --> C2[Inverse Transform]
     
-    B2 --> B3[计算评估指标]
-    C2 --> C3[计算评估指标]
+    B2 --> B3[Calculate Evaluation Metrics]
+    C2 --> C3[Calculate Evaluation Metrics]
     
     B3 --> M1[MSE]
     B3 --> M2[MAE]
@@ -259,13 +259,13 @@ flowchart TD
     C3 --> M7[R² Score]
     C3 --> M8[MAPE]
     
-    M4 --> V1[可视化结果]
+    M4 --> V1[Visualization Results]
     M8 --> V1
     
-    V1 --> V1_1[预测vs真实值散点图]
-    V1 --> V1_2[残差分布图]
-    V1 --> V1_3[不同频率段误差分析]
-    V1 --> V1_4[样本级别预测曲线]
+    V1 --> V1_1[Prediction vs True Scatter Plot]
+    V1 --> V1_2[Residual Distribution]
+    V1 --> V1_3[Error Analysis by Frequency Range]
+    V1 --> V1_4[Sample-level Prediction Curves]
     
     style A fill:#FFE4B5
     style V1 fill:#98FB98
@@ -273,108 +273,108 @@ flowchart TD
 
 ---
 
-### 6️⃣ 预测与后处理流程
+### 6️⃣ Prediction & Post-processing Flow
 
 ```mermaid
 flowchart TD
-    Start[新样本数据] --> FE[特征工程]
+    Start[New Sample Data] --> FE[Feature Engineering]
     
-    FE --> FE1[几何特征]
-    FE --> FE2[温度特征]
-    FE --> FE3[WLF特征]
-    FE --> FE4[分子量特征]
+    FE --> FE1[Geometric Features]
+    FE --> FE2[Temperature Features]
+    FE --> FE3[WLF Features]
+    FE --> FE4[Molecular Weight Features]
     
-    FE1 --> Std[特征标准化]
+    FE1 --> Std[Feature Standardization]
     FE2 --> Std
     FE3 --> Std
     FE4 --> Std
     
-    Std --> Pred{预测模式}
+    Std --> Pred{Prediction Mode}
     
-    Pred -->|带不确定性| MC[Monte Carlo Dropout]
-    Pred -->|不带不确定性| Simple[简单预测]
+    Pred -->|With Uncertainty| MC[Monte Carlo Dropout]
+    Pred -->|Without Uncertainty| Simple[Simple Prediction]
     
-    MC --> MC1[启用Dropout]
-    MC1 --> MC2[重复预测200次]
-    MC2 --> MC3[计算均值和标准差]
-    MC3 --> MC4[构建置信区间<br/>95% CI]
+    MC --> MC1[Enable Dropout]
+    MC1 --> MC2[Repeat Prediction 200 Times]
+    MC2 --> MC3[Calculate Mean & Std]
+    MC3 --> MC4[Build Confidence Interval<br/>95% CI]
     
-    Simple --> S1[单次预测]
+    Simple --> S1[Single Prediction]
     
-    MC4 --> Inverse[反标准化]
+    MC4 --> Inverse[Inverse Transform]
     S1 --> Inverse
     
-    Inverse --> I1[对数空间 → 线性空间<br/>10^log_G]
-    I1 --> I2[计算tan_δ_]
+    Inverse --> I1[Log Space → Linear Space<br/>10^log_G]
+    I1 --> I2[Calculate tan_δ_]
     
-    I2 --> PostProcess[物理一致性后处理]
+    I2 --> PostProcess[Physical Consistency Post-processing]
     
-    PostProcess --> PP1[按频率排序]
-    PP1 --> PP2[对数空间操作]
+    PostProcess --> PP1[Sort by Frequency]
+    PP1 --> PP2[Log Space Operation]
     
-    PP2 --> PP3[高斯平滑<br/>σ=1.0]
-    PP3 --> PP4[斜率裁剪<br/>[-0.1, 0.4]]
-    PP4 --> PP5[迭代修正3次]
+    PP2 --> PP3[Gaussian Smoothing<br/>σ=1.0]
+    PP3 --> PP4[Slope Clipping<br/>[-0.1, 0.4]]
+    PP4 --> PP5[Iterative Correction 3x]
     
-    PP5 --> PP6[tan_δ_约束<br/>clip_0, 10]
-    PP6 --> PP7[从G'和tan_δ_<br/>重建G'']
+    PP5 --> PP6[tan_δ_ Constraint<br/>clip_0, 10]
+    PP6 --> PP7[Reconstruct G'' from<br/>G' and tan_δ_]
     
-    PP7 --> PP8[高频区域<br/>额外平滑]
-    PP8 --> PP9[Cox-Merz规则<br/>修正]
+    PP7 --> PP8[High Frequency Region<br/>Extra Smoothing]
+    PP8 --> PP9[Cox-Merz Rule<br/>Correction]
     
-    PP9 --> PP10{有不确定性?}
-    PP10 -->|是| UC[更新置信区间]
-    PP10 -->|否| Output
+    PP9 --> PP10{Has Uncertainty?}
+    PP10 -->|Yes| UC[Update Confidence Interval]
+    PP10 -->|No| Output
     
-    UC --> UC1[保持相对不确定性]
-    UC1 --> UC2[对边界平滑]
-    UC2 --> UC3[确保边界包含预测值]
+    UC --> UC1[Maintain Relative Uncertainty]
+    UC1 --> UC2[Smooth Boundaries]
+    UC2 --> UC3[Ensure Bounds Contain Prediction]
     
-    UC3 --> Output[输出结果]
+    UC3 --> Output[Output Results]
     
-    Output --> Viz[可视化]
-    Viz --> V1[G', G'' vs 频率]
-    Viz --> V2[tan_δ_ vs 频率]
-    Viz --> V3[Cole-Cole图]
+    Output --> Viz[Visualization]
+    Viz --> V1[G', G'' vs Frequency]
+    Viz --> V2[tan_δ_ vs Frequency]
+    Viz --> V3[Cole-Cole Plot]
     
     style Start fill:#FFE4B5
     style PostProcess fill:#DDA0DD
     style Output fill:#90EE90
 ```
 
-**后处理关键步骤：**
-1. **平滑处理**：高斯滤波去噪
-2. **斜率约束**：限制变化速率
-3. **物理约束**：tan(δ)范围
-4. **一致性修正**：Cox-Merz规则
-5. **不确定性传播**：保持置信区间
+**Key Post-processing Steps:**
+1. **Smoothing**: Gaussian filtering for noise reduction
+2. **Slope Constraint**: Limit rate of change
+3. **Physical Constraint**: tan(δ) range
+4. **Consistency Correction**: Cox-Merz rule
+5. **Uncertainty Propagation**: Maintain confidence intervals
 
 ---
 
-## 📈 数据流向图
+## 📈 Data Flow Diagram
 
 ```mermaid
 flowchart LR
-    Raw[原始数据<br/>1874条] --> |80/20划分| Train[训练集<br/>~1499条]
-    Raw --> |80/20划分| Val[验证集<br/>~375条]
+    Raw[Raw Data<br/>1874 samples] --> |80/20 Split| Train[Training Set<br/>~1499 samples]
+    Raw --> |80/20 Split| Val[Validation Set<br/>~375 samples]
     
-    Train --> |Batch 64| TrainLoader[训练DataLoader]
-    Val --> |Batch 64| ValLoader[验证DataLoader]
+    Train --> |Batch 64| TrainLoader[Train DataLoader]
+    Val --> |Batch 64| ValLoader[Val DataLoader]
     
-    TrainLoader --> Model[PINN模型]
+    TrainLoader --> Model[PINN Model]
     ValLoader --> Model
     
-    Model --> Pred1[log_G'标准化]
-    Model --> Pred2[log_G''标准化]
+    Model --> Pred1[log_G' Standardized]
+    Model --> Pred2[log_G'' Standardized]
     
-    Pred1 --> |反标准化| G1_log[log_G']
-    Pred2 --> |反标准化| G2_log[log_G'']
+    Pred1 --> |Inverse Transform| G1_log[log_G']
+    Pred2 --> |Inverse Transform| G2_log[log_G'']
     
     G1_log --> |10^x| G1[G' Pa]
     G2_log --> |10^x| G2[G'' Pa]
     
-    G1 --> |后处理| G1_final[G' 最终]
-    G2 --> |后处理| G2_final[G'' 最终]
+    G1 --> |Post-processing| G1_final[G' Final]
+    G2 --> |Post-processing| G2_final[G'' Final]
     
     style Raw fill:#FFB6C1
     style Model fill:#DDA0DD
@@ -384,64 +384,64 @@ flowchart LR
 
 ---
 
-## 🎯 核心创新点
+## 🎯 Core Innovations
 
 ```mermaid
 mindmap
-    root((PINN<br/>核心创新))
-        物理约束
-            Cox-Merz规则
-            tan_δ_范围
-            斜率约束
-            平滑性
-            热力学约束
-        特征工程
-            WLF时温等效
-            分子量特征
-            几何特征
-            耦合特征
-        不确定性量化
+    root((PINN<br/>Core Innovations))
+        Physics Constraints
+            Cox-Merz Rule
+            tan_δ_ Range
+            Slope Constraint
+            Smoothness
+            Thermodynamic Constraint
+        Feature Engineering
+            WLF Time-Temperature
+            Molecular Weight Features
+            Geometric Features
+            Coupled Features
+        Uncertainty Quantification
             MC Dropout
-            200次采样
-            置信区间
-        后处理
-            物理一致性
-            高斯平滑
-            迭代修正
-            边界传播
+            200 Samples
+            Confidence Intervals
+        Post-processing
+            Physical Consistency
+            Gaussian Smoothing
+            Iterative Correction
+            Boundary Propagation
 ```
 
 ---
 
-## 📊 性能监控流程
+## 📊 Performance Monitoring Flow
 
 ```mermaid
 flowchart TD
-    A[每个Epoch] --> B[记录训练损失]
-    B --> B1[总损失]
-    B --> B2[数据损失]
-    B --> B3[物理损失]
-    B --> B4[各组件损失]
+    A[Each Epoch] --> B[Record Training Loss]
+    B --> B1[Total Loss]
+    B --> B2[Data Loss]
+    B --> B3[Physics Loss]
+    B --> B4[Component Losses]
     
-    A --> C[记录验证损失]
-    C --> C1[总损失]
-    C --> C2[物理损失]
+    A --> C[Record Validation Loss]
+    C --> C1[Total Loss]
+    C --> C2[Physics Loss]
     
-    B4 --> D[每10轮打印]
+    B4 --> D[Print Every 10 Epochs]
     C2 --> D
     
-    D --> E[训练完成后]
-    E --> F[绘制损失曲线]
-    F --> F1[总损失对比]
-    F --> F2[物理约束损失]
-    F --> F3[各组件趋势]
+    D --> E[After Training Complete]
+    E --> F[Plot Loss Curves]
+    F --> F1[Total Loss Comparison]
+    F --> F2[Physics Constraint Loss]
+    F --> F3[Component Trends]
     
-    C1 --> G{验证损失比较}
-    G -->|改善| H[保存最佳模型]
-    G -->|未改善| I[patience计数]
+    C1 --> G{Compare Validation Loss}
+    G -->|Improved| H[Save Best Model]
+    G -->|Not Improved| I[Increment Patience]
     I --> J{patience >= 50?}
-    J -->|是| K[提前停止]
-    J -->|否| Continue[继续训练]
+    J -->|Yes| K[Early Stopping]
+    J -->|No| Continue[Continue Training]
     
     style A fill:#FFE4B5
     style K fill:#FFB6C1
@@ -450,25 +450,25 @@ flowchart TD
 
 ---
 
-## 🔍 完整系统总结
+## 🔍 Complete System Summary
 
-| 模块 | 输入 | 输出 | 关键技术 |
-|------|------|------|----------|
-| **数据处理** | PB_Data.csv | 标准化特征矩阵 | 特征工程、WLF、标准化 |
-| **模型架构** | 12维特征 | 2维预测(log_G', log_G'') | 深层编码器、双分支 |
-| **训练** | 训练/验证集 | 最佳模型权重 | 物理约束、动态权重、提前停止 |
-| **预测** | 新样本 | G', G'', 不确定性 | MC Dropout、后处理 |
-| **可视化** | 预测结果 | 多种图表 | 散点图、Cole-Cole图 |
+| Module | Input | Output | Key Technologies |
+|--------|-------|--------|------------------|
+| **Data Processing** | PB_Data.csv | Standardized Feature Matrix | Feature Engineering, WLF, Standardization |
+| **Model Architecture** | 12D Features | 2D Prediction (log_G', log_G'') | Deep Encoder, Dual-branch |
+| **Training** | Train/Val Sets | Best Model Weights | Physics Constraints, Dynamic Weights, Early Stopping |
+| **Prediction** | New Samples | G', G'', Uncertainty | MC Dropout, Post-processing |
+| **Visualization** | Prediction Results | Various Plots | Scatter Plots, Cole-Cole Plots |
 
-**系统优势：**
-✅ 结合物理知识和数据驱动  
-✅ 提供预测不确定性  
-✅ 自动物理一致性修正  
-✅ 完整的训练监控  
-✅ 稳健的优化策略  
+**System Advantages:**
+✅ Combines physics knowledge with data-driven approach  
+✅ Provides prediction uncertainty  
+✅ Automatic physical consistency correction  
+✅ Complete training monitoring  
+✅ Robust optimization strategy  
 
-**实际表现：**
-- 训练集：~1499条
-- 验证集：~375条
-- 训练轮数：1000轮（完整）
-- 收敛情况：持续改进，未提前停止
+**Actual Performance:**
+- Training set: ~1499 samples
+- Validation set: ~375 samples
+- Training epochs: 1000 (complete)
+- Convergence: Continuous improvement, no early stopping
